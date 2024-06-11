@@ -2,4 +2,65 @@ syntax = "proto3";
 
 package grpc;
 
-option go_package = "";
+option go_package = "github.com/dmoyan0/Lab5/proto";
+
+message Item {
+    enum ItemPriority {
+        LOW = 0;
+        MID = 50;
+        HIGH = 100;
+    }
+    enum ItemStatus {
+        Inactive = 0;
+        Active = 1;
+    }
+
+    string id = 1;
+    string wishlistId = 2;
+    string name = 3;
+    string link = 4;
+    double price = 5;
+    ItemPriority priority = 6;
+    ItemStatus status = 7;
+}
+
+message Wishlist {
+    enum wishlistStatus {
+        Inactive = 0;
+        Active = 1;
+    }
+
+    string id = 1;
+    string name = 2;
+    wishlistStatus status = 3;
+}
+
+message CreateWishlistRequest {
+    WishList wishlist = 1;
+}
+
+message CreateWishlistResponse {
+    string wishlistId = 1;
+}
+
+message AddItemRequest {
+    Item item = 1;
+}
+
+message AddItemResponse {
+    string itemId = 1;
+}
+
+message ListWishlistRequest {
+    string wishlistId = 1;
+}
+
+message ListWishlistResponse {
+    repeated Item items = 1;
+}
+
+service WishListService {
+    rpc Create(CreateWishlistRequest) returns (CreateWishlistResponse);
+    rpc Add(AddItemRequest) returns (AddItemResponse);
+    rpc List(ListlistRequest) returns (ListWishlistResponse);
+}
