@@ -25,18 +25,18 @@ message Item {
 }
 
 message Wishlist {
-    enum wishlistStatus {
+    enum WishlistStatus {
         Inactive = 0;
         Active = 1;
     }
 
     string id = 1;
     string name = 2;
-    wishlistStatus status = 3;
+    WishlistStatus status = 3;
 }
 
 message CreateWishlistRequest {
-    WishList wishlist = 1;
+    Wishlist wishlist = 1;
 }
 
 message CreateWishlistResponse {
@@ -62,5 +62,5 @@ message ListWishlistResponse {
 service WishListService {
     rpc Create(CreateWishlistRequest) returns (CreateWishlistResponse);
     rpc Add(AddItemRequest) returns (AddItemResponse);
-    rpc List(ListlistRequest) returns (ListWishlistResponse);
+    rpc List(ListWishlistRequest) returns (ListWishlistResponse);
 }
