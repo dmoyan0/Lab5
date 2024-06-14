@@ -1,6 +1,11 @@
 syntax = "proto3";
 
-package proto;
+package LAB5;
+option go package = "github.com/dmoyan0/Lab5/grpc";
+
+service Broker {
+    rpc SendAddress (CommandRequest) returns (CommandResponse);
+}
 
 message CommandRequest {
     int32 command = 1;
@@ -8,8 +13,4 @@ message CommandRequest {
 
 message CommandResponse {
     int32 address = 1;
-}
-
-service Broker {
-    rpc SendAddress (ComandRequest) returns (ComandResponse);
 }
