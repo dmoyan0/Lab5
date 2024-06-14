@@ -25,7 +25,9 @@ func newServer() *server {
 
 func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*pb.VectorClockResponse, error) {
 	fmt.Printf("Fulcrum received command: %d\n", req.Command)
+	//Hacer algo con el comando
 
+	//Actualizacion del reloj vectorial
 	s.mu.Lock()
 	s.vectorClock[1]++
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
