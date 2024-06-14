@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package proto;
+
+message CommandRequest {
+    int32 command = 1;
+}
+
+message CommandResponse {
+    int32 address = 1;
+}
+
+service Broker {
+    rpc SendAddress (ComandRequest) returns (ComandResponse);
+}
