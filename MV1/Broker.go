@@ -17,12 +17,13 @@ type server struct {
 	pb.UnimplementedBrokerServer
 }
 
-func (s *server) SendDecision(ctx context.Context, req *pb.DecisionRequest) (*pb.DecisionResponse, error) {
-	fmt.Printf("Broker received decision: %d\n", req.Decision)
-	possibleAddresses := []string{"Address1", "Address2", "Address3"}
-	rand.Seed(time.Now().UnixNano())
-	randomAddress := possibleAddresses[rand.Intn(len(possibleAddresses))]
-	return &pb.DecisionResponse{Address: randomAddress}, nil
+func (s *server) SendDecision(ctx context.Context, req *pb.CommandRequest) (*pb.CommandResponse, error) {
+	fmt.Printf("Broker received decision: %d\n", req.Command)
+	possibleAddresses := []int32{1, 2, 3} //Cambiar por strings
+
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomAddress := possibleAddresses[rng.Intn(len(possibleAddresses))]
+	return &pb.CommandResponse{Address: randomAddress}, nil
 }
 
 func main() {
