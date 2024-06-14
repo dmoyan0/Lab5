@@ -12,5 +12,5 @@ message CommandRequest {
 }
 
 message CommandResponse {
-    int32 address = 1;//Cambiar por strings
+    string address = 1;
 }

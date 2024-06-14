@@ -17,9 +17,9 @@ type server struct {
 	pb.UnimplementedBrokerServer
 }
 
-func (s *server) SendDecision(ctx context.Context, req *pb.CommandRequest) (*pb.CommandResponse, error) {
+func (s *server) SendAddress(ctx context.Context, req *pb.CommandRequest) (*pb.CommandResponse, error) {
 	fmt.Printf("Broker received decision: %d\n", req.Command)
-	possibleAddresses := []int32{1, 2, 3} //Cambiar por strings
+	possibleAddresses := []string{"localhost:50052", "localhost:50053", "localhost:50054"} //Cambiar por strings
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddress := possibleAddresses[rng.Intn(len(possibleAddresses))]

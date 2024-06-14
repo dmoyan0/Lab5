@@ -1,3 +1,7 @@
+github.com/dmoyan0/Lab5 v0.0.0-20240614042450-e7bcf2a2d07e h1:NUyFD/xJRONEFi/P8g50zScDfUj6Nq/q0ZbDz2JrZIs=
+github.com/dmoyan0/Lab5 v0.0.0-20240614042450-e7bcf2a2d07e/go.mod h1:ng9iV8Plub3elZCX2VKdHQXdjjvFJl+tfFw3bsBaA9g=
+github.com/google/go-cmp v0.6.0 h1:ofyhxvXcZhMsU5ulbFiLKl/XBFqE1GSq7atu8tAmTRI=
+github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 golang.org/x/net v0.26.0 h1:soB7SVo0PWrY4vPW/+ay0jKDNScG2X9wFeYlXIvJsOQ=
 golang.org/x/net v0.26.0/go.mod h1:5YKkiSynbBIh3p6iOc/vibscux0x38BZDkn8sCUPxHE=
 golang.org/x/sys v0.21.0 h1:rF+pYz3DAGSQAxAu1CbC7catZg4ebC4UIeIhKxBZvws=

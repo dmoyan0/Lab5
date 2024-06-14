@@ -21,7 +21,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	decision := &pb.CommandRequest{Command: 1}
+	decision := &pb.CommandRequest{Command: 2} //Acá se deben ajustar el comando a enviar
 	r, err := c.SendAddress(ctx, decision)
 	if err != nil {
 		log.Fatalf("could not send decision: %v", err)
