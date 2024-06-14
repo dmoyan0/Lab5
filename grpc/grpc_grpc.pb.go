@@ -108,3 +108,94 @@ var Broker_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "grpc.proto",
 }
+
+const (
+	Fulcrum_ProcessCommand_FullMethodName = "/Fulcrum/ProcessCommand"
+)
+
+// FulcrumClient is the client API for Fulcrum service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type FulcrumClient interface {
+	ProcessCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*VectorClockResponse, error)
+}
+
+type fulcrumClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewFulcrumClient(cc grpc.ClientConnInterface) FulcrumClient {
+	return &fulcrumClient{cc}
+}
+
+func (c *fulcrumClient) ProcessCommand(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*VectorClockResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(VectorClockResponse)
+	err := c.cc.Invoke(ctx, Fulcrum_ProcessCommand_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FulcrumServer is the server API for Fulcrum service.
+// All implementations must embed UnimplementedFulcrumServer
+// for forward compatibility
+type FulcrumServer interface {
+	ProcessCommand(context.Context, *CommandRequest) (*VectorClockResponse, error)
+	mustEmbedUnimplementedFulcrumServer()
+}
+
+// UnimplementedFulcrumServer must be embedded to have forward compatible implementations.
+type UnimplementedFulcrumServer struct {
+}
+
+func (UnimplementedFulcrumServer) ProcessCommand(context.Context, *CommandRequest) (*VectorClockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProcessCommand not implemented")
+}
+func (UnimplementedFulcrumServer) mustEmbedUnimplementedFulcrumServer() {}
+
+// UnsafeFulcrumServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to FulcrumServer will
+// result in compilation errors.
+type UnsafeFulcrumServer interface {
+	mustEmbedUnimplementedFulcrumServer()
+}
+
+func RegisterFulcrumServer(s grpc.ServiceRegistrar, srv FulcrumServer) {
+	s.RegisterService(&Fulcrum_ServiceDesc, srv)
+}
+
+func _Fulcrum_ProcessCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FulcrumServer).ProcessCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Fulcrum_ProcessCommand_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FulcrumServer).ProcessCommand(ctx, req.(*CommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Fulcrum_ServiceDesc is the grpc.ServiceDesc for Fulcrum service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Fulcrum_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "Fulcrum",
+	HandlerType: (*FulcrumServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ProcessCommand",
+			Handler:    _Fulcrum_ProcessCommand_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "grpc.proto",
+}

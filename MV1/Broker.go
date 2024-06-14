@@ -19,7 +19,7 @@ type server struct {
 
 func (s *server) SendAddress(ctx context.Context, req *pb.CommandRequest) (*pb.CommandResponse, error) {
 	fmt.Printf("Broker received decision: %d\n", req.Command)
-	possibleAddresses := []string{"localhost:50052", "localhost:50053", "localhost:50054"} //Cambiar por strings
+	possibleAddresses := []string{":60051", ":60052", ":60053"} //Cambiar por strings
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddress := possibleAddresses[rng.Intn(len(possibleAddresses))]

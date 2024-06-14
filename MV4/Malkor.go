@@ -21,10 +21,24 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	decision := &pb.CommandRequest{Command: 1}
-	r, err := c.SendAddress(ctx, decision)
+	command := &pb.CommandRequest{Command: 1}
+	BrokerResponse, err := c.SendAddress(ctx, command)
 	if err != nil {
 		log.Fatalf("could not send decision: %v", err)
 	}
-	fmt.Printf("Jeth received address: %s\n", r.Address)
+	fmt.Printf("Jeth received address: %s\n", BrokerResponse.Address)
+
+	//Conexión al Fulcrum
+	fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("Error de conexión con Fulcrum: %v", err)
+	}
+	defer fulcrumConn.Close()
+	fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
+
+	fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
+	if err != nil {
+		log.Fatalf("No se pudo procesar el comando %v", err)
+	}
+	fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
 }

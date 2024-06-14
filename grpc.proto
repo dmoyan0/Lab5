@@ -6,10 +6,18 @@ service Broker {
     rpc SendAddress (CommandRequest) returns (CommandResponse);
 }
 
+service Fulcrum {
+    rpc ProcessCommand (CommandRequest) returns (VectorClockResponse);
+}
+
 message CommandRequest {
     int32 command = 1;
 }
 
 message CommandResponse {
     string address = 1;
+}
+
+message VectorClockResponse {
+    repeated int32 vector_clock = 1;
 }
