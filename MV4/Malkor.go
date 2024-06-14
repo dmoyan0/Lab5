@@ -40,5 +40,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("No se pudo procesar el comando %v", err)
 	}
-	fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+	fmt.Printf("Malkor recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
 }
