@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package LAB5;
-option go_package = "github.com/dmoyan0/Lab5";
+option go_package = "github.com/dmoyan0/Lab5/grpc";
 
 service Broker {
     rpc SendAddress (CommandRequest) returns (CommandResponse);
