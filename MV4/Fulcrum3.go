@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 
 	pb "github.com/dmoyan0/Lab5/grpc"
 	"google.golang.org/grpc"
@@ -12,12 +13,25 @@ import (
 
 type server struct {
 	pb.UnimplementedFulcrumServer
+	vectorClock []int32
+	mu          sync.Mutex
+}
+
+func newServer() *server {
+	return &server{
+		vectorClock: []int32{0, 0, 0},
+	}
 }
 
 func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*pb.VectorClockResponse, error) {
 	fmt.Printf("Fulcrum received command: %d\n", req.Command)
-	vectorClock := []int32{1, 2, 3} // Aquí debería estar la lógica para generar el reloj vectorial
-	return &pb.VectorClockResponse{VectorClock: vectorClock}, nil
+
+	s.mu.Lock()
+	s.vectorClock[2]++
+	vectorClockCopy := append([]int32(nil), s.vectorClock...)
+	s.mu.Unlock()
+
+	return &pb.VectorClockResponse{VectorClock: vectorClockCopy}, nil
 }
 
 func main() {
@@ -27,7 +41,7 @@ func main() {
 	}
 
 	s := grpc.NewServer()
-	pb.RegisterFulcrumServer(s, &server{})
+	pb.RegisterFulcrumServer(s, newServer())
 
 	fmt.Println("Fulcrum is running on port 60053...")
 	if err := s.Serve(lis); err != nil {
