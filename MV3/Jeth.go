@@ -40,12 +40,15 @@ func main() {
 		var value int32
 		var newName string
 
+		var commandNum int32
+
 		switch commandType {
 		case "AgregarBase":
 			if len(commandParts) < 3 {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
+			commandNum = 1
 			base = commandParts[2]
 			if len(commandParts) > 3 {
 				fmt.Sscanf(commandParts[3], "%d", &value)
@@ -55,6 +58,7 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
+			commandNum = 2
 			base = commandParts[2]
 			newName = commandParts[3]
 		case "ActualizarValor":
@@ -62,6 +66,7 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
+			commandNum = 3
 			base = commandParts[2]
 			fmt.Sscanf(commandParts[3], "%d", &value)
 		case "BorrarBase":
@@ -69,6 +74,7 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
+			commandNum = 4
 			base = commandParts[2]
 		default:
 			fmt.Println("Error comando")
@@ -113,7 +119,7 @@ func main() {
 		defer fulcrumConn.Close()
 		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-		fulcrumClock, err := fulcrumClient.getVectorClock(ctx, command)
+		fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
 
 		fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
 
