@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strings"
 	"sync"
 
 	pb "github.com/dmoyan0/Lab5/grpc"
@@ -27,13 +29,100 @@ func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*p
 	fmt.Printf("Fulcrum received command: %d\n", req.Command)
 
 	s.mu.Lock()
+	defer s.mu.Unlock()
+	switch req.Command {
+	case 1: // AgregarBase
+		s.agregarBase(req.Sector, req.Base, req.Value)
+	case 2: // RenombrarBase
+		s.renombrarBase(req.Sector, req.Base, req.NewName)
+	case 3: // ActualizarValor
+		s.actualizarValor(req.Sector, req.Base, req.Value)
+	case 4: // BorrarBase
+		s.borrarBase(req.Sector, req.Base)
+	}
 	s.vectorClock[2]++
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
-	s.mu.Unlock()
+	//s.mu.Unlock()
 
 	return &pb.VectorClockResponse{VectorClock: vectorClockCopy}, nil
 }
 
+func (s *server) agregarBase(sector, base string, value int32) {
+	filename := sector + ".txt"
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatalf("failed to open file: %v", err)
+	}
+	defer file.Close()
+
+	if _, err := file.WriteString(fmt.Sprintf("%s %d\n", base, value)); err != nil {
+		log.Fatalf("failed to write to file: %v", err)
+	}
+}
+
+func (s *server) renombrarBase(sector, base, newName string) {
+	filename := sector + ".txt"
+	input, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("failed to read file: %v", err)
+	}
+
+	output := ""
+	lines := strings.Split(string(input), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, base) {
+			output += fmt.Sprintf("%s %s\n", newName, strings.TrimSpace(line[len(base):]))
+		} else {
+			output += line + "\n"
+		}
+	}
+
+	if err = os.WriteFile(filename, []byte(output), 0644); err != nil {
+		log.Fatalf("failed to write file: %v", err)
+	}
+}
+
+func (s *server) actualizarValor(sector, base string, value int32) {
+	filename := sector + ".txt"
+	input, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("failed to read file: %v", err)
+	}
+
+	output := ""
+	lines := strings.Split(string(input), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, base) {
+			output += fmt.Sprintf("%s %d\n", base, value)
+		} else {
+			output += line + "\n"
+		}
+	}
+
+	if err = os.WriteFile(filename, []byte(output), 0644); err != nil {
+		log.Fatalf("failed to write file: %v", err)
+	}
+}
+
+func (s *server) borrarBase(sector, base string) {
+	filename := sector + ".txt"
+	input, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatalf("failed to read file: %v", err)
+	}
+
+	output := ""
+	lines := strings.Split(string(input), "\n")
+	for _, line := range lines {
+		if !strings.HasPrefix(line, base) {
+			output += line + "\n"
+		}
+	}
+
+	if err = os.WriteFile(filename, []byte(output), 0644); err != nil {
+		log.Fatalf("failed to write file: %v", err)
+	}
+}
 func main() {
 	lis, err := net.Listen("tcp", ":60053")
 	if err != nil {

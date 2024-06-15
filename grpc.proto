@@ -10,14 +10,18 @@ service Fulcrum {
     rpc ProcessCommand (CommandRequest) returns (VectorClockResponse);
 }
 
-message CommandRequest {
-    int32 command = 1;
-}
-
 message CommandResponse {
     string address = 1;
 }
 
 message VectorClockResponse {
     repeated int32 vector_clock = 1;
+}
+
+message CommandRequest {
+    int32 command = 1;
+    string sector = 2;
+    string base = 3;
+    string new_name = 4; 
+    int32 value = 5; 
 }
