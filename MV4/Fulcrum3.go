@@ -55,7 +55,7 @@ func (s *server) agregarBase(sector, base string, value int32) {
 	}
 	defer file.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("%s %d\n", base, value)); err != nil {
+	if _, err := file.WriteString(fmt.Sprintf("%s %s %d\n", sector, base, value)); err != nil {
 		log.Fatalf("failed to write to file: %v", err)
 	}
 }
@@ -71,7 +71,7 @@ func (s *server) renombrarBase(sector, base, newName string) {
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
 		if strings.HasPrefix(line, base) {
-			output += fmt.Sprintf("%s %s\n", newName, strings.TrimSpace(line[len(base):]))
+			output += fmt.Sprintf("$s %s %s\n", sector, newName, strings.TrimSpace(line[len(base):]))
 		} else {
 			output += line + "\n"
 		}
@@ -93,7 +93,7 @@ func (s *server) actualizarValor(sector, base string, value int32) {
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
 		if strings.HasPrefix(line, base) {
-			output += fmt.Sprintf("%s %d\n", base, value)
+			output += fmt.Sprintf("%s %s %d\n", sector, base, value)
 		} else {
 			output += line + "\n"
 		}
@@ -114,7 +114,7 @@ func (s *server) borrarBase(sector, base string) {
 	output := ""
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
-		if !strings.HasPrefix(line, base) {
+		if !strings.HasPrefix(line, sector+" "+base) {
 			output += line + "\n"
 		}
 	}
