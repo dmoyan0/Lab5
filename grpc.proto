@@ -8,6 +8,7 @@ service Broker {
 
 service Fulcrum {
     rpc ProcessCommand (CommandRequest) returns (VectorClockResponse);
+    rpc getVectorClock (CommandRequest) returns (VectorClockResponse);
 }
 
 message CommandResponse {

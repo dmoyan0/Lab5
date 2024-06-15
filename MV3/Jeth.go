@@ -113,6 +113,10 @@ func main() {
 		defer fulcrumConn.Close()
 		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
+		fulcrumClock, err := fulcrumClient.getVectorClock(ctx, command)
+
+		fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
+
 		fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
 		if err != nil {
 			log.Fatalf("No se pudo procesar el comando %v", err)

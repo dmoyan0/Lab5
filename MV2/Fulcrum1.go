@@ -25,6 +25,12 @@ func newServer() *server {
 	}
 }
 
+func (s *server) getVectorClock(ctx context.Context, req *pb.CommandRequest) (*pb.VectorClockResponse, error) {
+	fmt.Printf("Fulcrum vector. . . .\n")
+	vectorClockCopy := append([]int32(nil), s.vectorClock...)
+	return &pb.VectorClockResponse{VectorClock: vectorClockCopy}, nil
+}
+
 func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*pb.VectorClockResponse, error) {
 	fmt.Printf("Fulcrum received command: %d\n", req.Command)
 
@@ -71,8 +77,8 @@ func (s *server) renombrarBase(sector, base, newName string) {
 	output := ""
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(line, base) {
-			output += fmt.Sprintf("$s %s %s\n", sector, newName, strings.TrimSpace(line[len(base):]))
+		if strings.HasPrefix(line, sector+" "+base) {
+			output += fmt.Sprintf("%s %s\n", newName, strings.TrimSpace(line[len(base):]))
 		} else {
 			output += line + "\n"
 		}
@@ -93,8 +99,8 @@ func (s *server) actualizarValor(sector, base string, value int32) {
 	output := ""
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(line, base) {
-			output += fmt.Sprintf("%s %s %d\n", sector, base, value)
+		if strings.HasPrefix(line, sector+" "+base) {
+			output += fmt.Sprintf("%s %d\n", sector+" "+base, value)
 		} else {
 			output += line + "\n"
 		}
