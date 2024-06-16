@@ -110,47 +110,53 @@ func main() {
 			NewName: "CampamentoRenombrado",
 		}*/
 
-		BrokerResponse, err := c.SendAddress(ctx, command)
-		if err != nil {
-			log.Fatalf("could not send command: %v", err)
-		}
-		fmt.Printf("Jeth received address: %s\n", BrokerResponse.Address)
-
-		// Conexión al Fulcrum
-		fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			log.Fatalf("Error de conexión con Fulcrum: %v", err)
-		}
-		defer fulcrumConn.Close()
-		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
-
-		//Validacion del reloj vectorial
-		record, exists := jeth.Sectors[sector]
-		if exists {
-			clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+		//loop para nueva dirección hasta que el reloj vect. coincida
+		for {
+			BrokerResponse, err := c.SendAddress(ctx, command)
 			if err != nil {
-				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+				log.Fatalf("could not send command: %v", err)
 			}
-			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
-				continue //Otra opcion es pedir inmediatamente otra direccion al Broker
+			fmt.Printf("Jeth received address: %s\n", BrokerResponse.Address)
+
+			// Conexión al Fulcrum
+			fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
+			if err != nil {
+				log.Fatalf("Error de conexión con Fulcrum: %v", err)
 			}
-		}
+			defer fulcrumConn.Close()
+			fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-		// fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
+			//Validacion del reloj vectorial
+			record, exists := jeth.Sectors[sector]
+			if exists {
+				clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+				if err != nil {
+					log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+				}
+				if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
+					fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
+					continue //Otra opcion es pedir inmediatamente otra direccion al Broker
+				}
+			}
 
-		// fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
+			// fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
 
-		fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
-		if err != nil {
-			log.Fatalf("No se pudo procesar el comando %v", err)
-		}
-		fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+			// fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
 
-		jeth.Sectors[sector] = SectorRecord{
-			Sector:        sector,
-			VectorClock:   fulcrumResp.VectorClock,
-			FulcrumServer: BrokerResponse.Address,
+			command.VectorClock = jeth.Sectors[sector].VectorClock
+
+			fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
+			if err != nil {
+				log.Fatalf("No se pudo procesar el comando %v", err)
+			}
+			fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+
+			jeth.Sectors[sector] = SectorRecord{
+				Sector:        sector,
+				VectorClock:   fulcrumResp.VectorClock,
+				FulcrumServer: BrokerResponse.Address,
+			}
+			break
 		}
 	}
 }

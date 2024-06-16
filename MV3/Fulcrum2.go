@@ -37,6 +37,11 @@ func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*p
 	//Actualizacion del reloj vectorial
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	for i, v := range req.VectorClock {
+		if s.vectorClock[i] < v {
+			s.vectorClock[i] = v
+		}
+	}
 	switch req.Command {
 	case 1: // AgregarBase
 		s.agregarBase(req.Sector, req.Base, req.Value)
@@ -89,8 +94,9 @@ func (s *server) renombrarBase(sector, base, newName string) {
 	output := ""
 	lines := strings.Split(string(input), "\n")
 	for _, line := range lines {
-		if strings.HasPrefix(line, sector+" "+base) {
-			output += fmt.Sprintf("%s %s\n", newName, strings.TrimSpace(line[len(base):]))
+		parts := strings.Fields(line)
+		if len(parts) == 3 && parts[1] == base {
+			output += fmt.Sprintf("%s %s %s\n", sector, newName, parts[2])
 		} else {
 			output += line + "\n"
 		}
@@ -174,6 +180,30 @@ func (s *server) borrarBase(sector, base string) {
 	if err = os.WriteFile(filename, []byte(output), 0644); err != nil {
 		log.Fatalf("failed to write file: %v", err)
 	}
+}
+
+func (s *server) GetEnemies(ctx context.Context, req *pb.EnemyRequest) (*pb.EnemyResponse, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	filename := req.Sector + ".txt"
+	file, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, fmt.Errorf("Error al leer el archivo: %v", err)
+	}
+
+	var enemies int32
+	lines := strings.Split(string(file), "\n")
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) == 3 && parts[1] == req.Base {
+			fmt.Sscanf(parts[2], "%d", &enemies)
+			break
+		}
+	}
+
+	vectorClockCopy := append([]int32(nil), s.vectorClock...)
+	return &pb.EnemyResponse{Enemies: enemies, VectorClock: vectorClockCopy}, nil
 }
 
 func main() {

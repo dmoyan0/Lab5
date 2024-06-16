@@ -8,7 +8,8 @@ service Broker {
 
 service Fulcrum {
     rpc ProcessCommand (CommandRequest) returns (VectorClockResponse);
-    rpc getVectorClock (CommandRequest) returns (VectorClockResponse);
+    rpc GetVectorClock (CommandRequest) returns (VectorClockResponse);
+    rpc GetEnemies (EnemyRequest) returns (EnemyResponse);
 }
 
 message CommandResponse {
@@ -25,4 +26,15 @@ message CommandRequest {
     string base = 3;
     string new_name = 4; 
     int32 value = 5; 
+    repeated int32 vector_clock = 6;
+
+}
+message EnemyRequest {
+    string sector = 1;
+    string base = 2;
+}
+
+message EnemyResponse {
+    int32 enemies = 1;
+    repeated int32 vector_clock = 2;
 }
