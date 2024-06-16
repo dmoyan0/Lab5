@@ -13,7 +13,18 @@ import (
 	"google.golang.org/grpc"
 )
 
+type SectorRecord struct {
+	Sector        string
+	VectorClock   []int32
+	FulcrumServer string
+}
+
+type Jeth struct {
+	Sectors map[string]SectorRecord
+}
+
 func main() {
+	jeth := Jeth{Sectors: make(map[string]SectorRecord)}
 	// Conexión al Broker
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -40,15 +51,12 @@ func main() {
 		var value int32
 		var newName string
 
-		var commandNum int32
-
 		switch commandType {
 		case "AgregarBase":
 			if len(commandParts) < 3 {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
-			commandNum = 1
 			base = commandParts[2]
 			if len(commandParts) > 3 {
 				fmt.Sscanf(commandParts[3], "%d", &value)
@@ -58,7 +66,6 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
-			commandNum = 2
 			base = commandParts[2]
 			newName = commandParts[3]
 		case "ActualizarValor":
@@ -66,7 +73,6 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
-			commandNum = 3
 			base = commandParts[2]
 			fmt.Sscanf(commandParts[3], "%d", &value)
 		case "BorrarBase":
@@ -74,7 +80,6 @@ func main() {
 				fmt.Println("Comando invalido, favor intentelo de nuevo")
 				continue
 			}
-			commandNum = 4
 			base = commandParts[2]
 		default:
 			fmt.Println("Error comando")
@@ -119,14 +124,41 @@ func main() {
 		defer fulcrumConn.Close()
 		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-		fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
+		//Validacion del reloj vectorial
+		record, exists := jeth.Sectors[sector]
+		if exists {
+			clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+			if err != nil {
+				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+			}
+			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
+				fmt.Printf("El reloj vectorial no coincide")
+			}
+		}
 
-		fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
+		// fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
+
+		// fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
 
 		fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
 		if err != nil {
 			log.Fatalf("No se pudo procesar el comando %v", err)
 		}
 		fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+
+		jeth.Sectors[sector] = SectorRecord{
+			Sector:        sector,
+			VectorClock:   fulcrumResp.VectorClock,
+			FulcrumServer: BrokerResponse.Address,
+		}
 	}
+}
+
+func compareVectorClock(vc1, vc2 []int32) bool {
+	for i := range vc1 {
+		if vc1[i] != vc2[i] {
+			return false
+		}
+	}
+	return true
 }
