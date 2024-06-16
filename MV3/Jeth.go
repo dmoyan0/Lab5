@@ -132,7 +132,8 @@ func main() {
 				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
 			}
 			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-				fmt.Printf("El reloj vectorial no coincide")
+				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
+				continue //Otra opcion es pedir inmediatamente otra direccion al Broker
 			}
 		}
 

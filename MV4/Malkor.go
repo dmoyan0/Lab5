@@ -13,7 +13,18 @@ import (
 	"google.golang.org/grpc"
 )
 
+type SectorRecord struct {
+	Sector        string
+	VectorClock   []int32
+	FulcrumServer string
+}
+
+type Malkor struct {
+	Sectors map[string]SectorRecord
+}
+
 func main() {
+	malkor := Malkor{Sectors: make(map[string]SectorRecord)}
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -112,10 +123,38 @@ func main() {
 		defer fulcrumConn.Close()
 		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
+		//Validacion del reloj vectorial
+		record, exists := malkor.Sectors[sector]
+		if exists {
+			clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+			if err != nil {
+				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+			}
+			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
+				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
+				continue //Otra opcion es pedir inmediatamente otra direccion al Broker
+			}
+		}
+
 		fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
 		if err != nil {
 			log.Fatalf("No se pudo procesar el comando %v", err)
 		}
 		fmt.Printf("Malkor recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+
+		malkor.Sectors[sector] = SectorRecord{
+			Sector:        sector,
+			VectorClock:   fulcrumResp.VectorClock,
+			FulcrumServer: BrokerResponse.Address,
+		}
 	}
+}
+
+func compareVectorClock(vc1, vc2 []int32) bool {
+	for i := range vc1 {
+		if vc1[i] != vc2[i] {
+			return false
+		}
+	}
+	return true
 }
