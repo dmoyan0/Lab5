@@ -113,7 +113,7 @@ func (s *server) renombrarBase(sector, base, newName string) {
 	}
 	defer file.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("RenombrarBase %s %s %d\n", sector, base, newName)); err != nil {
+	if _, err := file.WriteString(fmt.Sprintf("RenombrarBase %s %s %s\n", sector, base, newName)); err != nil {
 		log.Fatalf("failed to write to log: %v", err)
 	}
 }

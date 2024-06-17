@@ -1,5 +1,0 @@
-AgregarBase Sector1 Base1 100
-RenombrarBase Sector1 Base1 %!d(string=Base2)
-ActualizarValor Sector1 Base2 200
-AgregarBase Sector1 Base1 100
-BorrarBase Sector1 Base1

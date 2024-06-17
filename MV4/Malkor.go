@@ -131,6 +131,7 @@ func main() {
 				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
 			}
 			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
+				notifyInconsistency(c, sector, base, "Reloj vectorial inconsistente")
 				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
 				continue //Otra opcion es pedir inmediatamente otra direccion al Broker
 			}
@@ -157,4 +158,23 @@ func compareVectorClock(vc1, vc2 []int32) bool {
 		}
 	}
 	return true
+}
+
+func notifyInconsistency(brokerClient pb.BrokerClient, sector, base, errorMessage string) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	req := &pb.InconsistencyRequest{
+		Sector:        sector,
+		Base:          base,
+		ClientAddress: "client-address-here", // La dirección del cliente
+		ErrorMessage:  errorMessage,
+	}
+
+	_, err := brokerClient.NotifyInconsistency(ctx, req)
+	if err != nil {
+		log.Printf("Error al notificar al Broker: %v", err)
+	} else {
+		fmt.Println("Inconsistencia notificada al Broker.")
+	}
 }

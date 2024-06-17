@@ -4,6 +4,7 @@ option go_package = "github.com/dmoyan0/Lab5/grpc";
 
 service Broker {
     rpc SendAddress (CommandRequest) returns (CommandResponse);
+    rpc NotifyInconsistency (InconsistencyRequest) returns (InconsistencyResponse);
 }
 
 service Fulcrum {
@@ -37,4 +38,15 @@ message EnemyRequest {
 message EnemyResponse {
     int32 enemies = 1;
     repeated int32 vector_clock = 2;
+}
+
+message InconsistencyRequest {
+    string sector = 1;
+    string base = 2;
+    string clientAddress = 3;
+    string errorMessage = 4;
+}
+
+message InconsistencyResponse {
+    bool success = 1;
 }

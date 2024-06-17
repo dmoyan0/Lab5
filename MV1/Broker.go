@@ -26,6 +26,15 @@ func (s *server) SendAddress(ctx context.Context, req *pb.CommandRequest) (*pb.C
 	return &pb.CommandResponse{Address: randomAddress}, nil
 }
 
+func (s *server) NotifyInconsistency(ctx context.Context, req *pb.InconsistencyRequest) (*pb.InconsistencyResponse, error) {
+	log.Printf("Inconsistencia reportada: Sector: %s, Base: %s, Cliente: %s, Error: %s",
+		req.Sector, req.Base, req.ClientAddress, req.ErrorMessage)
+	// Aquí puedes implementar la lógica para manejar la inconsistencia
+	// Por ejemplo, notificar a otros servidores Fulcrum, registrar el problema, etc.
+
+	return &pb.InconsistencyResponse{Success: true}, nil
+}
+
 func main() {
 	lis, err := net.Listen("tcp", ":50051")
 	if err != nil {
