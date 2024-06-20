@@ -20,17 +20,18 @@ type InfoSector struct {
 	FulcrumServer string
 }
 
-// Se almacena sectores consultados
+// Se almacena el nombre de un sector con la infoSector
 type Commander struct {
 	Sectors map[string]InfoSector
 }
 
 func main() {
+	//Se inicia con un map vacio
 	commander := Commander{Sectors: make(map[string]InfoSector)}
 
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("No se pudo conectar: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewBrokerClient(conn)
@@ -43,7 +44,7 @@ func main() {
 		commandParts := strings.Split(commandStr, " ")
 
 		if len(commandParts) != 3 || commandParts[0] != "GetEnemigos" {
-			fmt.Println("Comando invalido, favor intentelo de nuevo")
+			fmt.Println("Comando inválido, favor intente de nuevo")
 			continue
 		}
 
@@ -56,11 +57,13 @@ func main() {
 		defer cancel()
 
 		for {
+			//Se envia solicitud al broker para obtener dirección de algun fulcrum
 			BrokerResponse, err := c.SendAddress(ctx, &pb.CommandRequest{})
 			if err != nil {
 				log.Fatalf("Error enviar el comando: %v", err)
 			}
 
+			//Conexion fulcrum
 			fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
 			if err != nil {
 				log.Fatalf("Error de conexión con Fulcrum: %v", err)
@@ -68,38 +71,35 @@ func main() {
 			defer fulcrumConn.Close()
 			fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-			record, exists := commander.Sectors[sector]
-			if exists {
-				clockResp, err := fulcrumClient.GetVectorClock(ctx, &pb.CommandRequest{Sector: sector, Base: base})
-				if err != nil {
-					log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
-				}
-				if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-					fmt.Println("El reloj vectorial no coincide, solicitando otra dirección...")
-					continue
-				}
-			}
-
 			enemyResp, err := fulcrumClient.GetEnemies(ctx, request)
 			if err != nil {
 				log.Fatalf("No se pudo obtener la información: %v", err)
 			}
 
-			fmt.Printf("Cantidad de enemigos en %s %s: %d\n", sector, base, enemyResp.Enemies)
-			commander.Sectors[sector] = InfoSector{
-				Sector:        sector,
-				Base:          base,
-				VectorClock:   enemyResp.VectorClock,
-				FulcrumServer: BrokerResponse.Address,
+			// Ultima info del sector que se conoce
+			record, exists := commander.Sectors[sector]
+
+			// Comparar el reloj vectorial nuevo con el último conocido
+			if !exists || compareVectorClock(record.VectorClock, enemyResp.VectorClock) {
+				fmt.Printf("Cantidad de enemigos en %s %s: %d\n", sector, base, enemyResp.Enemies)
+				commander.Sectors[sector] = InfoSector{
+					Sector:        sector,
+					Base:          base,
+					VectorClock:   enemyResp.VectorClock,
+					FulcrumServer: BrokerResponse.Address,
+				}
+				break
+			} else {
+				fmt.Println("El reloj vectorial no coincide con el último conocido, solicitando otra dirección...")
+				continue
 			}
-			break
 		}
 	}
 }
 
 func compareVectorClock(vc1, vc2 []int32) bool {
 	for i := range vc1 {
-		if vc1[i] != vc2[i] {
+		if vc1[i] > vc2[i] {
 			return false
 		}
 	}
