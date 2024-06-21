@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -202,6 +203,14 @@ func (s *server) GetEnemies(ctx context.Context, req *pb.EnemyRequest) (*pb.Enem
 
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
 	return &pb.EnemyResponse{Enemies: enemies, VectorClock: vectorClockCopy}, nil
+}
+
+func (s *server) GetFile(ctx context.Context, req *pb.FileRequest) (*pb.FileResponse, error) {
+	content, err := ioutil.ReadFile(req.GetFilename())
+	if err != nil {
+		return nil, err
+	}
+	return &pb.FileResponse{Content: content}, nil
 }
 
 func main() {

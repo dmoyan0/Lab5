@@ -1,13 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	pb "github.com/dmoyan0/Lab5/grpc"
 	"google.golang.org/grpc"
@@ -205,6 +208,77 @@ func (s *server) GetEnemies(ctx context.Context, req *pb.EnemyRequest) (*pb.Enem
 
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
 	return &pb.EnemyResponse{Enemies: enemies, VectorClock: vectorClockCopy}, nil
+}
+
+func getFileFromServer(address, filename string) ([]byte, error) {
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return nil, fmt.Errorf("did not connect: %v", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewFulcrumClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	req := &pb.FileRequest{Filename: filename}
+	res, err := client.GetFile(ctx, req)
+	if err != nil {
+		return nil, fmt.Errorf("could not get file: %v", err)
+	}
+
+	return res.GetContent(), nil
+}
+
+func splitContentIntoLines(content []byte) []string {
+	return strings.Split(string(content), "\n")
+}
+
+func merge() error {
+	servers := []string{":60052", ":60053"}
+	filename := "Log.txt"
+
+	var allLines [][]string
+
+	for _, server := range servers {
+		content, err := getFileFromServer(server, filename)
+		if err != nil {
+			log.Printf("Error getting log file from %s: %v\n", server, err)
+		}
+
+		lines := splitContentIntoLines(content)
+		allLines = append(allLines, lines)
+	}
+
+	content, err := ioutil.ReadFile("LogF1.txt")
+	if err != nil {
+		log.Printf("Error getting log file F1: %v\n", err)
+	}
+	lines := splitContentIntoLines(content)
+	allLines = append(allLines, lines)
+
+	var merged []string
+	for _, array := range allLines {
+		merged = append(merged, array...)
+	}
+
+	file, err := os.Create("Log.txt")
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	for _, line := range merged {
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			return err
+		}
+	}
+	writer.Flush()
+
+	return nil
 }
 
 func main() {
