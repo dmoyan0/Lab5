@@ -372,7 +372,7 @@ func merge(s *server) error {
 			log.Printf("Error al enviar archivo merge al servidor %s: %v\n", server, err)
 		}
 
-		// Conexión para obtener el reloj vectorial actualizado
+		// Conexión para obtener el reloj vect. actualizado
 		conn, err := grpc.Dial(server, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			log.Printf("Error al conectar al servidor Fulcrum: %v\n", err)
@@ -384,14 +384,14 @@ func merge(s *server) error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		// Obtener el reloj vectorial de los servidores
+		// Obtener el reloj vect. de los servidores
 		resp, err := client.GetVectorClock(ctx, &pb.CommandRequest{})
 		if err != nil {
 			log.Printf("Error al obtener el reloj vectorial %s: %v\n", server, err)
 			continue
 		}
 
-		// Combinar los relojes vectoriales y quedarse con el valor máximo
+		// Combinar los relojes vectoriales y quedarse con el valor max
 		if len(mergedVectorClock) == 0 {
 			mergedVectorClock = resp.VectorClock
 		} else {
