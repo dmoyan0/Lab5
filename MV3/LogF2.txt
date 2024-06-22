@@ -1,4 +1,0 @@
-AgregarBase Sector1 Base1 5
-RenombrarBase Sector1 Base1 Base2
-ActualizarValor Sector1 Base2 10
-AgregarBase Sector2 Base1 20
