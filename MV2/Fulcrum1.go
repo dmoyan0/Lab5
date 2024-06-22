@@ -235,35 +235,122 @@ func splitContentIntoLines(content []byte) []string {
 	return strings.Split(string(content), "\n")
 }
 
-func merge() error {
+// Recibe archivo merge y lo lee para actualizar info de los sectores
+func (s *server) ReceiveMergedFile(ctx context.Context, req *pb.FileRequest) (*pb.FileResponse, error) {
+	err := ioutil.WriteFile(req.Filename, req.Content, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reescribir los archivos de los sectores con el nuevo Log
+	content, err := ioutil.ReadFile(req.Filename)
+	if err != nil {
+		return nil, fmt.Errorf("Error al leer el archivo merged: %v", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) < 3 {
+			continue
+		}
+		command := parts[0]
+		sector := parts[1]
+		base := parts[2]
+		var value int32
+		if len(parts) > 3 {
+			fmt.Sscanf(parts[3], "%d", &value)
+		}
+
+		switch command {
+		case "AgregarBase":
+			s.agregarBase(sector, base, value)
+		case "RenombrarBase":
+			s.renombrarBase(sector, base, base)
+		case "ActualizarValor":
+			s.actualizarValor(sector, base, value)
+		case "BorrarBase":
+			s.borrarBase(sector, base)
+		}
+	}
+
+	// Actualizar el reloj vectorial después de leer el archivo merge
+	s.mu.Lock()
+	for i := range s.vectorClock {
+		s.vectorClock[i]++
+	}
+	s.mu.Unlock()
+
+	return &pb.FileResponse{Content: []byte("Se actualizo la info correctamente")}, nil
+}
+
+// Función para enviar el archivo Log.txt del merge a un servidor fulcrum, crea la conexión y llama a la funcion para mandar el archivo
+func sendMergedFileToFulcrum(serverAddress, filename string) error {
+	content, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return fmt.Errorf("No se pudo leer el archivo merge: %v", err)
+	}
+
+	conn, err := grpc.Dial(serverAddress, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		return fmt.Errorf("No se pudo establecer conexión con el fulcrum: %v", err)
+	}
+	defer conn.Close()
+
+	client := pb.NewFulcrumClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	//Solicitud para enviar archivo
+	req := &pb.FileRequest{
+		Filename: filename,
+		Content:  content,
+	}
+
+	_, err = client.ReceiveMergedFile(ctx, req)
+	if err != nil {
+		return fmt.Errorf("No se pudo enviar archivo merge: %v", err)
+	}
+
+	return nil
+}
+
+// Función para combinar los logs de todos los Fulcrum y actualizar los archivos de sectores
+func merge(s *server) error {
 	servers := []string{":60052", ":60053"}
-	filename := "Log.txt"
+	filename := "Log.txt" // Nombre del archivo del merge
 
 	var allLines [][]string
+	var mergedVectorClock []int32
 
+	// Extraer la información de los Logs de los otros Fulcrum
 	for _, server := range servers {
 		content, err := getFileFromServer(server, filename)
 		if err != nil {
-			log.Printf("Error getting log file from %s: %v\n", server, err)
+			log.Printf("Error al obtener el archivo de log desde %s: %v\n", server, err)
+			continue
 		}
-
 		lines := splitContentIntoLines(content)
 		allLines = append(allLines, lines)
 	}
 
+	// Extraer información del propio LogF1
 	content, err := ioutil.ReadFile("LogF1.txt")
 	if err != nil {
-		log.Printf("Error getting log file F1: %v\n", err)
+		log.Printf("Error al obtener el archivo de log F1: %v\n", err)
 	}
 	lines := splitContentIntoLines(content)
 	allLines = append(allLines, lines)
 
+	// Juntar toda la información
 	var merged []string
 	for _, array := range allLines {
 		merged = append(merged, array...)
 	}
 
-	file, err := os.Create("Log.txt")
+	// Crear el archivo nuevo
+	file, err := os.Create(filename)
 	if err != nil {
 		return err
 	}
@@ -278,6 +365,49 @@ func merge() error {
 	}
 	writer.Flush()
 
+	// Enviar archivo Log.txt a los otros servidores Fulcrum
+	for _, server := range servers {
+		err := sendMergedFileToFulcrum(server, filename)
+		if err != nil {
+			log.Printf("Error al enviar archivo merge al servidor %s: %v\n", server, err)
+		}
+
+		// Conexión para obtener el reloj vectorial actualizado
+		conn, err := grpc.Dial(server, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			log.Printf("Error al conectar al servidor Fulcrum: %v\n", err)
+			continue
+		}
+		defer conn.Close()
+		client := pb.NewFulcrumClient(conn)
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		// Obtener el reloj vectorial de los servidores
+		resp, err := client.GetVectorClock(ctx, &pb.CommandRequest{})
+		if err != nil {
+			log.Printf("Error al obtener el reloj vectorial %s: %v\n", server, err)
+			continue
+		}
+
+		// Combinar los relojes vectoriales y quedarse con el valor máximo
+		if len(mergedVectorClock) == 0 {
+			mergedVectorClock = resp.VectorClock
+		} else {
+			for i, v := range resp.VectorClock {
+				if mergedVectorClock[i] < v {
+					mergedVectorClock[i] = v
+				}
+			}
+		}
+	}
+
+	// Actualizar el reloj vectorial f1 con el reloj combinado
+	s.mu.Lock()
+	s.vectorClock = mergedVectorClock
+	s.mu.Unlock()
+
 	return nil
 }
 
@@ -287,11 +417,23 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	s := grpc.NewServer()
-	pb.RegisterFulcrumServer(s, newServer())
+	s := newServer()
+	grpcServer := grpc.NewServer()
+	pb.RegisterFulcrumServer(grpcServer, s)
+
+	go func() {
+		for {
+			// Merge cada 30 segundos
+			time.Sleep(30 * time.Second)
+			err := merge(s)
+			if err != nil {
+				log.Printf("Error realizando el merge: %v", err)
+			}
+		}
+	}()
 
 	fmt.Println("Fulcrum is running on port 60051...")
-	if err := s.Serve(lis); err != nil {
+	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

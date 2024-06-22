@@ -213,6 +213,55 @@ func (s *server) GetFile(ctx context.Context, req *pb.FileRequest) (*pb.FileResp
 	return &pb.FileResponse{Content: content}, nil
 }
 
+// Recibe archivo merge y lo lee para actualizar info de los sectores
+func (s *server) ReceiveMergedFile(ctx context.Context, req *pb.FileRequest) (*pb.FileResponse, error) {
+	err := ioutil.WriteFile(req.GetFilename(), req.GetContent(), 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// Reescribir los archivos de los sectores con el nuevo Log
+	content, err := ioutil.ReadFile(req.GetFilename())
+	if err != nil {
+		return nil, fmt.Errorf("Error al leer el archivo merged: %v", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) < 3 {
+			continue
+		}
+		command := parts[0]
+		sector := parts[1]
+		base := parts[2]
+		var value int32
+		if len(parts) > 3 {
+			fmt.Sscanf(parts[3], "%d", &value)
+		}
+
+		switch command {
+		case "AgregarBase":
+			s.agregarBase(sector, base, value)
+		case "RenombrarBase":
+			s.renombrarBase(sector, base, base)
+		case "ActualizarValor":
+			s.actualizarValor(sector, base, value)
+		case "BorrarBase":
+			s.borrarBase(sector, base)
+		}
+	}
+
+	// Actualizar el reloj vectorial después de leer el archivo merge
+	s.mu.Lock()
+	for i := range s.vectorClock {
+		s.vectorClock[i]++
+	}
+	s.mu.Unlock()
+
+	return &pb.FileResponse{Content: []byte("Se actualizo la info correctamente")}, nil
+}
+
 func main() {
 	lis, err := net.Listen("tcp", ":60053")
 	if err != nil {

@@ -12,6 +12,8 @@ service Fulcrum {
     rpc GetVectorClock (CommandRequest) returns (VectorClockResponse);
     rpc GetEnemies (EnemyRequest) returns (EnemyResponse);
     rpc GetFile (FileRequest) returns (FileResponse);
+    rpc ReceiveMergedFile (FileRequest) returns (FileResponse); 
+
 }
 
 message CommandResponse {
@@ -54,6 +56,7 @@ message InconsistencyResponse {
 
 message FileRequest {
     string filename = 1;
+    bytes content = 2;
 }
 
 message FileResponse { 
