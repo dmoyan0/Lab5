@@ -37,15 +37,15 @@ func main() {
 	for {
 		fmt.Println("Ingrese alguno de los comandos siguiendo el formato: \n (1) AgregarBase <nombre sector> <nombre base> [valor] \n (2) RenombrarBase <nombre sector> <nombre base> <nuevo nombre> \n (3) ActualizarValor <nombre sector> <nombre base> <nuevo valor> \n (4) BorrarBase <nombre sector> <nombre base>")
 		commandStr, _ := reader.ReadString('\n')
-		commandStr = strings.TrimSpace(commandStr)     //Quitamos espacios en blanco innecesarios
-		commandParts := strings.Split(commandStr, " ") //Separamos por ' '
+		commandStr = strings.TrimSpace(commandStr)     // Quitamos espacios en blanco innecesarios
+		commandParts := strings.Split(commandStr, " ") // Separamos por ' '
 
 		if len(commandParts) < 2 {
 			fmt.Println("Comando invalido, favor intentelo de nuevo")
 			continue
 		}
 
-		commandType := commandParts[0] //AgregarBase, RenombrarBase, ActualizarValor y BorrarBase
+		commandType := commandParts[0] // AgregarBase, RenombrarBase, ActualizarValor y BorrarBase
 		sector := commandParts[1]
 		base := ""
 		var value int32
@@ -102,15 +102,7 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		//command := &pb.CommandRequest{Command: 1}
-		/*command := &pb.CommandRequest{
-			Command: 2, // RenombrarBase
-			Sector:  "SectorAlpha",
-			Base:    "Campamento1",
-			NewName: "CampamentoRenombrado",
-		}*/
-
-		//loop para nueva dirección hasta que el reloj vect. coincida
+		// Loop para nueva dirección hasta que el reloj vectorial coincida
 		for {
 			BrokerResponse, err := c.SendAddress(ctx, command)
 			if err != nil {
@@ -126,29 +118,24 @@ func main() {
 			defer fulcrumConn.Close()
 			fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-			//Validacion del reloj vectorial
+			// Validacion del reloj vectorial
 			record, exists := jeth.Sectors[sector]
 			if exists {
-				clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+				clockResp, err := fulcrumClient.GetVectorClock(ctx, &pb.CommandRequest{Sector: sector, Base: base})
 				if err != nil {
 					log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
 				}
 				if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-					notifyInconsistency(c, sector, base, "Reloj vectorial inconsistente")
+					notifyInconsistency(c, sector, base, BrokerResponse.Address, "Reloj vectorial inconsistente")
 					fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
-					continue //Otra opcion es pedir inmediatamente otra direccion al Broker
+					continue // Otra opción es pedir inmediatamente otra dirección al Broker
 				}
 			}
-
-			// fulcrumClock, err := fulcrumClient.GetVectorClock(ctx, command)
-
-			// fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumClock.VectorClock)
 
 			command.VectorClock = jeth.Sectors[sector].VectorClock
 
 			fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
 			if err != nil {
-				//Acá tambien se podria agregar una notificacion de inconsistencia
 				log.Fatalf("No se pudo procesar el comando %v", err)
 			}
 			fmt.Printf("Jeth recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
@@ -172,14 +159,14 @@ func compareVectorClock(vc1, vc2 []int32) bool {
 	return true
 }
 
-func notifyInconsistency(brokerClient pb.BrokerClient, sector, base, errorMessage string) {
+func notifyInconsistency(brokerClient pb.BrokerClient, sector, base, clientAddress, errorMessage string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	req := &pb.InconsistencyRequest{
 		Sector:        sector,
 		Base:          base,
-		ClientAddress: "client-address-here", // La dirección del cliente
+		ClientAddress: clientAddress,
 		ErrorMessage:  errorMessage,
 	}
 

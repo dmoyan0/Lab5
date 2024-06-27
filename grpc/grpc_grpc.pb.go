@@ -24,6 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 type BrokerClient interface {
 	SendAddress(ctx context.Context, in *CommandRequest, opts ...grpc.CallOption) (*CommandResponse, error)
 	NotifyInconsistency(ctx context.Context, in *InconsistencyRequest, opts ...grpc.CallOption) (*InconsistencyResponse, error)
+	NotifyMerge(ctx context.Context, in *MergeRequest, opts ...grpc.CallOption) (*MergeResponse, error)
 }
 
 type brokerClient struct {
@@ -52,12 +53,22 @@ func (c *brokerClient) NotifyInconsistency(ctx context.Context, in *Inconsistenc
 	return out, nil
 }
 
+func (c *brokerClient) NotifyMerge(ctx context.Context, in *MergeRequest, opts ...grpc.CallOption) (*MergeResponse, error) {
+	out := new(MergeResponse)
+	err := c.cc.Invoke(ctx, "/Broker/NotifyMerge", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BrokerServer is the server API for Broker service.
 // All implementations must embed UnimplementedBrokerServer
 // for forward compatibility
 type BrokerServer interface {
 	SendAddress(context.Context, *CommandRequest) (*CommandResponse, error)
 	NotifyInconsistency(context.Context, *InconsistencyRequest) (*InconsistencyResponse, error)
+	NotifyMerge(context.Context, *MergeRequest) (*MergeResponse, error)
 	mustEmbedUnimplementedBrokerServer()
 }
 
@@ -70,6 +81,9 @@ func (UnimplementedBrokerServer) SendAddress(context.Context, *CommandRequest) (
 }
 func (UnimplementedBrokerServer) NotifyInconsistency(context.Context, *InconsistencyRequest) (*InconsistencyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NotifyInconsistency not implemented")
+}
+func (UnimplementedBrokerServer) NotifyMerge(context.Context, *MergeRequest) (*MergeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NotifyMerge not implemented")
 }
 func (UnimplementedBrokerServer) mustEmbedUnimplementedBrokerServer() {}
 
@@ -120,6 +134,24 @@ func _Broker_NotifyInconsistency_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Broker_NotifyMerge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MergeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BrokerServer).NotifyMerge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Broker/NotifyMerge",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BrokerServer).NotifyMerge(ctx, req.(*MergeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Broker_ServiceDesc is the grpc.ServiceDesc for Broker service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -135,6 +167,10 @@ var Broker_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "NotifyInconsistency",
 			Handler:    _Broker_NotifyInconsistency_Handler,
 		},
+		{
+			MethodName: "NotifyMerge",
+			Handler:    _Broker_NotifyMerge_Handler,
+		},
 	},
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "grpc.proto",
@@ -149,6 +185,7 @@ type FulcrumClient interface {
 	GetEnemies(ctx context.Context, in *EnemyRequest, opts ...grpc.CallOption) (*EnemyResponse, error)
 	GetFile(ctx context.Context, in *FileRequest, opts ...grpc.CallOption) (*FileResponse, error)
 	ReceiveMergedFile(ctx context.Context, in *FileRequest, opts ...grpc.CallOption) (*FileResponse, error)
+	Merge(ctx context.Context, in *MergeRequest, opts ...grpc.CallOption) (*MergeResponse, error)
 }
 
 type fulcrumClient struct {
@@ -204,6 +241,15 @@ func (c *fulcrumClient) ReceiveMergedFile(ctx context.Context, in *FileRequest, 
 	return out, nil
 }
 
+func (c *fulcrumClient) Merge(ctx context.Context, in *MergeRequest, opts ...grpc.CallOption) (*MergeResponse, error) {
+	out := new(MergeResponse)
+	err := c.cc.Invoke(ctx, "/Fulcrum/Merge", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FulcrumServer is the server API for Fulcrum service.
 // All implementations must embed UnimplementedFulcrumServer
 // for forward compatibility
@@ -213,6 +259,7 @@ type FulcrumServer interface {
 	GetEnemies(context.Context, *EnemyRequest) (*EnemyResponse, error)
 	GetFile(context.Context, *FileRequest) (*FileResponse, error)
 	ReceiveMergedFile(context.Context, *FileRequest) (*FileResponse, error)
+	Merge(context.Context, *MergeRequest) (*MergeResponse, error)
 	mustEmbedUnimplementedFulcrumServer()
 }
 
@@ -234,6 +281,9 @@ func (UnimplementedFulcrumServer) GetFile(context.Context, *FileRequest) (*FileR
 }
 func (UnimplementedFulcrumServer) ReceiveMergedFile(context.Context, *FileRequest) (*FileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReceiveMergedFile not implemented")
+}
+func (UnimplementedFulcrumServer) Merge(context.Context, *MergeRequest) (*MergeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Merge not implemented")
 }
 func (UnimplementedFulcrumServer) mustEmbedUnimplementedFulcrumServer() {}
 
@@ -338,6 +388,24 @@ func _Fulcrum_ReceiveMergedFile_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Fulcrum_Merge_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MergeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FulcrumServer).Merge(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Fulcrum/Merge",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FulcrumServer).Merge(ctx, req.(*MergeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Fulcrum_ServiceDesc is the grpc.ServiceDesc for Fulcrum service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -364,6 +432,10 @@ var Fulcrum_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReceiveMergedFile",
 			Handler:    _Fulcrum_ReceiveMergedFile_Handler,
+		},
+		{
+			MethodName: "Merge",
+			Handler:    _Fulcrum_Merge_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

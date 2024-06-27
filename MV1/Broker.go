@@ -11,6 +11,7 @@ import (
 	pb "github.com/dmoyan0/Lab5/grpc"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 type server struct {
@@ -27,14 +28,29 @@ func (s *server) SendAddress(ctx context.Context, req *pb.CommandRequest) (*pb.C
 }
 
 func (s *server) NotifyInconsistency(ctx context.Context, req *pb.InconsistencyRequest) (*pb.InconsistencyResponse, error) {
-	log.Printf("Inconsistencia reportada: Sector: %s, Base: %s, Cliente: %s, Error: %s",
+	// Log de la inconsistencia reportada
+	log.Printf("Inconsistencia reportada: Sector: %s, Base: %s, Fulcrum: %s, Error: %s",
 		req.Sector, req.Base, req.ClientAddress, req.ErrorMessage)
-	// Aquí puedes implementar la lógica para manejar la inconsistencia
-	// Por ejemplo, notificar a otros servidores Fulcrum, registrar el problema, etc.
-	messageResponse, err := s.fulcrumClient.merge(ctx, req)
+
+	// Crear un cliente Fulcrum para el servidor específico que maneja el merge
+	mergeFulcrumAddress := ":60051" // Dirección del Fulcrum que maneja el merge
+	conn, err := grpc.Dial(mergeFulcrumAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to Fulcrum at %s: %v", mergeFulcrumAddress, err)
+	}
+	defer conn.Close()
+
+	fulcrumClient := pb.NewFulcrumClient(conn)
+
+	// Llamar al método Merge en el cliente Fulcrum
+	_, err = fulcrumClient.Merge(ctx, &pb.MergeRequest{})
 	if err != nil {
 		return &pb.InconsistencyResponse{Success: false}, err
 	}
+
+	// Registro adicional para notificar que la inconsistencia fue manejada
+	log.Println("La inconsistencia fue manejada correctamente.")
+
 	return &pb.InconsistencyResponse{Success: true}, nil
 }
 

@@ -23,30 +23,6 @@ type Malkor struct {
 	Sectors map[string]SectorRecord
 }
 
-func notifyBroker(sector, base, clientAddress, errorMessage string) error {
-	conn, err := grpc.Dial(":50051", grpc.WithInsecure())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-
-	client := pb.NewBrokerClient(conn)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	_, err = client.NotifyInconsistency(ctx, &pb.InconsistencyRequest{
-		Sector:        sector,
-		Base:          base,
-		ClientAddress: clientAddress,
-		ErrorMessage:  errorMessage,
-	})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func main() {
 	malkor := Malkor{Sectors: make(map[string]SectorRecord)}
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
@@ -150,19 +126,14 @@ func main() {
 		//Validacion del reloj vectorial
 		record, exists := malkor.Sectors[sector]
 		if exists {
-			clockResp, err := fulcrumClient.GetVectorClock(ctx, command)
+			clockResp, err := fulcrumClient.GetVectorClock(ctx, &pb.CommandRequest{Sector: sector, Base: base})
 			if err != nil {
 				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
 			}
 			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-				notifyInconsistency(c, sector, base, "Reloj vectorial inconsistente")
+				notifyInconsistency(c, sector, base, BrokerResponse.Address, "Reloj vectorial inconsistente")
 				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
-				continue //Otra opcion es pedir inmediatamente otra direccion al Broker //Pedir al Broker que se notifique a Fulcrum1 que debe realizar un merge.
-				err := notifyBroker(req.Sector, req.Base, req.ClientAddress, "Inconsistencia detectada")
-				if err != nil {
-					return &pb.InconsistencyResponse{Success: false}, err
-				}
-
+				continue // Otra opción es pedir inmediatamente otra dirección al Broker
 			}
 		}
 
@@ -189,14 +160,14 @@ func compareVectorClock(vc1, vc2 []int32) bool {
 	return true
 }
 
-func notifyInconsistency(brokerClient pb.BrokerClient, sector, base, errorMessage string) {
+func notifyInconsistency(brokerClient pb.BrokerClient, sector, base, clientAddress, errorMessage string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	req := &pb.InconsistencyRequest{
 		Sector:        sector,
 		Base:          base,
-		ClientAddress: "client-address-here", // La dirección del cliente
+		ClientAddress: clientAddress,
 		ErrorMessage:  errorMessage,
 	}
 
