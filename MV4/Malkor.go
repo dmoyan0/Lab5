@@ -23,6 +23,30 @@ type Malkor struct {
 	Sectors map[string]SectorRecord
 }
 
+func notifyBroker(sector, base, clientAddress, errorMessage string) error {
+	conn, err := grpc.Dial(":50051", grpc.WithInsecure())
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client := pb.NewBrokerClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	_, err = client.NotifyInconsistency(ctx, &pb.InconsistencyRequest{
+		Sector:        sector,
+		Base:          base,
+		ClientAddress: clientAddress,
+		ErrorMessage:  errorMessage,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
 	malkor := Malkor{Sectors: make(map[string]SectorRecord)}
 	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
@@ -133,7 +157,12 @@ func main() {
 			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
 				notifyInconsistency(c, sector, base, "Reloj vectorial inconsistente")
 				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
-				continue //Otra opcion es pedir inmediatamente otra direccion al Broker
+				continue //Otra opcion es pedir inmediatamente otra direccion al Broker //Pedir al Broker que se notifique a Fulcrum1 que debe realizar un merge.
+				err := notifyBroker(req.Sector, req.Base, req.ClientAddress, "Inconsistencia detectada")
+				if err != nil {
+					return &pb.InconsistencyResponse{Success: false}, err
+				}
+
 			}
 		}
 

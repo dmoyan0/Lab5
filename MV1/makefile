@@ -14,4 +14,4 @@ run: $(BIN1)
 
 # Limpieza de binarios
 clean:
-	rm -f $(BIN1) $(BIN2)
+	rm -f $(BIN1) $(BIN2) *.txt

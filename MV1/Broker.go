@@ -31,7 +31,10 @@ func (s *server) NotifyInconsistency(ctx context.Context, req *pb.InconsistencyR
 		req.Sector, req.Base, req.ClientAddress, req.ErrorMessage)
 	// Aquí puedes implementar la lógica para manejar la inconsistencia
 	// Por ejemplo, notificar a otros servidores Fulcrum, registrar el problema, etc.
-
+	messageResponse, err := s.fulcrumClient.merge(ctx, req)
+	if err != nil {
+		return &pb.InconsistencyResponse{Success: false}, err
+	}
 	return &pb.InconsistencyResponse{Success: true}, nil
 }
 

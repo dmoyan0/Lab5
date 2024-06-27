@@ -5,6 +5,7 @@ option go_package = "github.com/dmoyan0/Lab5/grpc";
 service Broker {
     rpc SendAddress (CommandRequest) returns (CommandResponse);
     rpc NotifyInconsistency (InconsistencyRequest) returns (InconsistencyResponse);
+    rpc NotifyMerge (MergeRequest) returns (MergeResponse);
 }
 
 service Fulcrum {
@@ -13,7 +14,7 @@ service Fulcrum {
     rpc GetEnemies (EnemyRequest) returns (EnemyResponse);
     rpc GetFile (FileRequest) returns (FileResponse);
     rpc ReceiveMergedFile (FileRequest) returns (FileResponse); 
-
+    rpc Merge (MergeRequest) returns (MergeResponse);
 }
 
 message CommandResponse {
@@ -61,4 +62,10 @@ message FileRequest {
 
 message FileResponse { 
     bytes content = 1;
+}
+
+message MergeRequest {}
+
+message MergeResponse {
+    bool success = 1;
 }

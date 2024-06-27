@@ -30,4 +30,4 @@ all: $(BIN1) $(BIN2) run_all
 
 # Limpieza de binarios
 clean:
-	rm -f $(BIN1) $(BIN2)
+	rm -f $(BIN1) $(BIN2) *.txt
