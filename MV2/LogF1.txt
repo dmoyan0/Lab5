@@ -1,2 +1,0 @@
-AgregarBase Sector1 Base 50
-RenombrarBase Sector1 Base Base1
