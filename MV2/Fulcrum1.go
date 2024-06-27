@@ -14,6 +14,8 @@ import (
 
 	pb "github.com/dmoyan0/Lab5/grpc"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type server struct {
@@ -28,6 +30,18 @@ func newServer() *server {
 	}
 }
 
+func ensureFileExists(filename string) error {
+	_, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		file, err := os.Create(filename)
+		if err != nil {
+			return fmt.Errorf("could not create file %s: %v", filename, err)
+		}
+		file.Close()
+	}
+	return nil
+}
+
 func (s *server) GetVectorClock(ctx context.Context, req *pb.CommandRequest) (*pb.VectorClockResponse, error) {
 	fmt.Printf("Fulcrum vector. . . .\n")
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
@@ -38,7 +52,6 @@ func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*p
 	fmt.Printf("Fulcrum received command: %d\n", req.Command)
 
 	s.mu.Lock()
-
 	defer s.mu.Unlock()
 
 	for i, v := range req.VectorClock {
@@ -59,24 +72,49 @@ func (s *server) ProcessCommand(ctx context.Context, req *pb.CommandRequest) (*p
 	}
 	s.vectorClock[0]++
 	vectorClockCopy := append([]int32(nil), s.vectorClock...)
-	//s.mu.Unlock()
 
 	return &pb.VectorClockResponse{VectorClock: vectorClockCopy}, nil
 }
 
 func (s *server) agregarBase(sector, base string, value int32) {
 	Log := "LogF1.txt"
-	filelog, err := os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err := ensureFileExists(Log)
+	if err != nil {
+		log.Fatalf("failed to ensure log exists: %v", err)
+	}
+
+	// Leer el archivo de log existente y verificar duplicados
+	existingEntries := make(map[string]bool)
+	filelog, err := os.OpenFile(Log, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("failed to open log: %v", err)
 	}
-	defer filelog.Close()
+	scanner := bufio.NewScanner(filelog)
+	for scanner.Scan() {
+		existingEntries[scanner.Text()] = true
+	}
+	filelog.Close()
 
-	if _, err := filelog.WriteString(fmt.Sprintf("AgregarBase %s %s %d\n", sector, base, value)); err != nil {
-		log.Fatalf("failed to write to log: %v", err)
+	// Agregar la nueva entrada solo si no existe
+	entry := fmt.Sprintf("AgregarBase %s %s %d", sector, base, value)
+	if !existingEntries[entry] {
+		filelog, err = os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed to open log: %v", err)
+		}
+		defer filelog.Close()
+
+		if _, err := filelog.WriteString(entry + "\n"); err != nil {
+			log.Fatalf("failed to write to log: %v", err)
+		}
 	}
 
 	filename := sector + ".txt"
+	err = ensureFileExists(filename)
+	if err != nil {
+		log.Fatalf("failed to ensure sector file exists: %v", err)
+	}
+
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Fatalf("failed to open file: %v", err)
@@ -90,6 +128,11 @@ func (s *server) agregarBase(sector, base string, value int32) {
 
 func (s *server) renombrarBase(sector, base, newName string) {
 	filename := sector + ".txt"
+	err := ensureFileExists(filename)
+	if err != nil {
+		log.Fatalf("failed to ensure sector file exists: %v", err)
+	}
+
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("failed to read file: %v", err)
@@ -111,30 +154,77 @@ func (s *server) renombrarBase(sector, base, newName string) {
 	}
 
 	Log := "LogF1.txt"
-	file, err := os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err = ensureFileExists(Log)
+	if err != nil {
+		log.Fatalf("failed to ensure log exists: %v", err)
+	}
+
+	// Leer el archivo de log existente y verificar duplicados
+	existingEntries := make(map[string]bool)
+	filelog, err := os.OpenFile(Log, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("failed to open log: %v", err)
 	}
-	defer file.Close()
+	scanner := bufio.NewScanner(filelog)
+	for scanner.Scan() {
+		existingEntries[scanner.Text()] = true
+	}
+	filelog.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("RenombrarBase %s %s %s\n", sector, base, newName)); err != nil {
-		log.Fatalf("failed to write to log: %v", err)
+	// Agregar la nueva entrada solo si no existe
+	entry := fmt.Sprintf("RenombrarBase %s %s %s", sector, base, newName)
+	if !existingEntries[entry] {
+		filelog, err = os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed to open log: %v", err)
+		}
+		defer filelog.Close()
+
+		if _, err := filelog.WriteString(entry + "\n"); err != nil {
+			log.Fatalf("failed to write to log: %v", err)
+		}
 	}
 }
 
 func (s *server) actualizarValor(sector, base string, value int32) {
 	Log := "LogF1.txt"
-	file, err := os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err := ensureFileExists(Log)
+	if err != nil {
+		log.Fatalf("failed to ensure log exists: %v", err)
+	}
+
+	// Leer el archivo de log existente y verificar duplicados
+	existingEntries := make(map[string]bool)
+	filelog, err := os.OpenFile(Log, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("failed to open log: %v", err)
 	}
-	defer file.Close()
+	scanner := bufio.NewScanner(filelog)
+	for scanner.Scan() {
+		existingEntries[scanner.Text()] = true
+	}
+	filelog.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("ActualizarValor %s %s %d\n", sector, base, value)); err != nil {
-		log.Fatalf("failed to write to log: %v", err)
+	// Agregar la nueva entrada solo si no existe
+	entry := fmt.Sprintf("ActualizarValor %s %s %d", sector, base, value)
+	if !existingEntries[entry] {
+		filelog, err = os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed to open log: %v", err)
+		}
+		defer filelog.Close()
+
+		if _, err := filelog.WriteString(entry + "\n"); err != nil {
+			log.Fatalf("failed to write to log: %v", err)
+		}
 	}
 
 	filename := sector + ".txt"
+	err = ensureFileExists(filename)
+	if err != nil {
+		log.Fatalf("failed to ensure sector file exists: %v", err)
+	}
+
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("failed to read file: %v", err)
@@ -157,17 +247,43 @@ func (s *server) actualizarValor(sector, base string, value int32) {
 
 func (s *server) borrarBase(sector, base string) {
 	Log := "LogF1.txt"
-	file, err := os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	err := ensureFileExists(Log)
+	if err != nil {
+		log.Fatalf("failed to ensure log exists: %v", err)
+	}
+
+	// Leer el archivo de log existente y verificar duplicados
+	existingEntries := make(map[string]bool)
+	filelog, err := os.OpenFile(Log, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Fatalf("failed to open log: %v", err)
 	}
-	defer file.Close()
+	scanner := bufio.NewScanner(filelog)
+	for scanner.Scan() {
+		existingEntries[scanner.Text()] = true
+	}
+	filelog.Close()
 
-	if _, err := file.WriteString(fmt.Sprintf("BorrarBase %s %s\n", sector, base)); err != nil {
-		log.Fatalf("failed to write to log: %v", err)
+	// Agregar la nueva entrada solo si no existe
+	entry := fmt.Sprintf("BorrarBase %s %s", sector, base)
+	if !existingEntries[entry] {
+		filelog, err = os.OpenFile(Log, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatalf("failed to open log: %v", err)
+		}
+		defer filelog.Close()
+
+		if _, err := filelog.WriteString(entry + "\n"); err != nil {
+			log.Fatalf("failed to write to log: %v", err)
+		}
 	}
 
 	filename := sector + ".txt"
+	err = ensureFileExists(filename)
+	if err != nil {
+		log.Fatalf("failed to ensure sector file exists: %v", err)
+	}
+
 	input, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatalf("failed to read file: %v", err)
@@ -191,6 +307,11 @@ func (s *server) GetEnemies(ctx context.Context, req *pb.EnemyRequest) (*pb.Enem
 	defer s.mu.Unlock()
 
 	filename := req.Sector + ".txt"
+	err := ensureFileExists(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed to ensure sector file exists: %v", err)
+	}
+
 	file, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, fmt.Errorf("Error al leer el archivo: %v", err)
@@ -225,6 +346,9 @@ func getFileFromServer(address, filename string) ([]byte, error) {
 	req := &pb.FileRequest{Filename: filename}
 	res, err := client.GetFile(ctx, req)
 	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("could not get file: %v", err)
 	}
 
@@ -249,7 +373,14 @@ func (s *server) ReceiveMergedFile(ctx context.Context, req *pb.FileRequest) (*p
 	}
 
 	lines := strings.Split(string(content), "\n")
+	processedCommands := make(map[string]bool)
+
 	for _, line := range lines {
+		if processedCommands[line] {
+			continue
+		}
+		processedCommands[line] = true
+
 		parts := strings.Fields(line)
 		if len(parts) < 3 {
 			continue
@@ -318,8 +449,8 @@ func sendMergedFileToFulcrum(serverAddress, filename string) error {
 
 // Función para combinar los logs de todos los Fulcrum y actualizar los archivos de sectores
 func merge(s *server) error {
-	servers := []string{":60052", ":60053"}
-	filename := "Log.txt" // Nombre del archivo del merge
+	servers := []string{":60052", ":60053"} // Direcciones de otros Fulcrum
+	filename := "Merge.txt"                 // Nombre del archivo del merge
 
 	var allLines [][]string
 	var mergedVectorClock []int32
@@ -331,22 +462,40 @@ func merge(s *server) error {
 			log.Printf("Error al obtener el archivo de log desde %s: %v\n", server, err)
 			continue
 		}
-		lines := splitContentIntoLines(content)
-		allLines = append(allLines, lines)
+		if content != nil {
+			lines := splitContentIntoLines(content)
+			allLines = append(allLines, lines)
+		} else {
+			// Crear archivo vacío si no existe
+			err = ioutil.WriteFile(filename, []byte{}, 0644)
+			if err != nil {
+				log.Printf("Error al crear archivo vacío en %s: %v\n", server, err)
+				continue
+			}
+		}
 	}
 
 	// Extraer información del propio LogF1
 	content, err := ioutil.ReadFile("LogF1.txt")
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		log.Printf("Error al obtener el archivo de log F1: %v\n", err)
+		return err
 	}
-	lines := splitContentIntoLines(content)
-	allLines = append(allLines, lines)
+	if err == nil {
+		lines := splitContentIntoLines(content)
+		allLines = append(allLines, lines)
+	}
 
 	// Juntar toda la información
 	var merged []string
+	processedCommands := make(map[string]bool)
 	for _, array := range allLines {
-		merged = append(merged, array...)
+		for _, line := range array {
+			if !processedCommands[line] {
+				processedCommands[line] = true
+				merged = append(merged, line)
+			}
+		}
 	}
 
 	// Crear el archivo nuevo
@@ -365,14 +514,14 @@ func merge(s *server) error {
 	}
 	writer.Flush()
 
-	// Enviar archivo Log.txt a los otros servidores Fulcrum
+	// Enviar archivo Merge.txt a los otros servidores Fulcrum
 	for _, server := range servers {
 		err := sendMergedFileToFulcrum(server, filename)
 		if err != nil {
 			log.Printf("Error al enviar archivo merge al servidor %s: %v\n", server, err)
 		}
 
-		// Conexión para obtener el reloj vect. actualizado
+		// Conexión para obtener el reloj vectorial actualizado
 		conn, err := grpc.Dial(server, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			log.Printf("Error al conectar al servidor Fulcrum: %v\n", err)
@@ -384,7 +533,7 @@ func merge(s *server) error {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		// Obtener el reloj vect. de los servidores
+		// Obtener el reloj vectorial de los servidores
 		resp, err := client.GetVectorClock(ctx, &pb.CommandRequest{})
 		if err != nil {
 			log.Printf("Error al obtener el reloj vectorial %s: %v\n", server, err)
