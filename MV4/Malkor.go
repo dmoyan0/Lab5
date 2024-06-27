@@ -36,15 +36,15 @@ func main() {
 	for {
 		fmt.Println("Ingrese alguno de los comandos siguiendo el formato: \n (1) AgregarBase <nombre sector> <nombre base> [valor] \n (2) RenombrarBase <nombre sector> <nombre base> <nuevo nombre> \n (3) ActualizarValor <nombre sector> <nombre base> <nuevo valor> \n (4) BorrarBase <nombre sector> <nombre base>")
 		commandStr, _ := reader.ReadString('\n')
-		commandStr = strings.TrimSpace(commandStr)     //Quitamos espacios en blanco innecesarios
-		commandParts := strings.Split(commandStr, " ") //Separamos por ' '
+		commandStr = strings.TrimSpace(commandStr)     // Quitamos espacios en blanco innecesarios
+		commandParts := strings.Split(commandStr, " ") // Separamos por ' '
 
 		if len(commandParts) < 2 {
 			fmt.Println("Comando invalido, favor intentelo de nuevo")
 			continue
 		}
 
-		commandType := commandParts[0] //AgregarBase, RenombrarBase, ActualizarValor y BorrarBase
+		commandType := commandParts[0] // AgregarBase, RenombrarBase, ActualizarValor y BorrarBase
 		sector := commandParts[1]
 		base := ""
 		var value int32
@@ -101,52 +101,49 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		//command := &pb.CommandRequest{Command: 1}
-		/*command := &pb.CommandRequest{
-			Command: 2, // RenombrarBase
-			Sector:  "SectorAlpha",
-			Base:    "Campamento1",
-			NewName: "CampamentoRenombrado",
-		}*/
-
-		BrokerResponse, err := c.SendAddress(ctx, command)
-		if err != nil {
-			log.Fatalf("could not send decision: %v", err)
-		}
-		fmt.Printf("Jeth received address: %s\n", BrokerResponse.Address)
-
-		//Conexión al Fulcrum
-		fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
-		if err != nil {
-			log.Fatalf("Error de conexión con Fulcrum: %v", err)
-		}
-		defer fulcrumConn.Close()
-		fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
-
-		//Validacion del reloj vectorial
-		record, exists := malkor.Sectors[sector]
-		if exists {
-			clockResp, err := fulcrumClient.GetVectorClock(ctx, &pb.CommandRequest{Sector: sector, Base: base})
+		for {
+			BrokerResponse, err := c.SendAddress(ctx, command)
 			if err != nil {
-				log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+				log.Fatalf("could not send decision: %v", err)
 			}
-			if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
-				notifyInconsistency(c, sector, base, BrokerResponse.Address, "Reloj vectorial inconsistente")
-				fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
-				continue // Otra opción es pedir inmediatamente otra dirección al Broker
+			fmt.Printf("Malkor received address: %s\n", BrokerResponse.Address)
+
+			// Conexión al Fulcrum
+			fulcrumConn, err := grpc.Dial(BrokerResponse.Address, grpc.WithInsecure(), grpc.WithBlock())
+			if err != nil {
+				log.Fatalf("Error de conexión con Fulcrum: %v", err)
 			}
-		}
+			defer fulcrumConn.Close()
+			fulcrumClient := pb.NewFulcrumClient(fulcrumConn)
 
-		fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
-		if err != nil {
-			log.Fatalf("No se pudo procesar el comando %v", err)
-		}
-		fmt.Printf("Malkor recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+			// Validacion del reloj vectorial
+			record, exists := malkor.Sectors[sector]
+			if exists {
+				clockResp, err := fulcrumClient.GetVectorClock(ctx, &pb.CommandRequest{Sector: sector, Base: base})
+				if err != nil {
+					log.Fatalf("No se pudo obtener el reloj vectorial: %v", err)
+				}
+				if !compareVectorClock(clockResp.VectorClock, record.VectorClock) {
+					notifyInconsistency(c, sector, base, BrokerResponse.Address, "Reloj vectorial inconsistente")
+					fmt.Printf("El reloj vectorial no coincide, elegir otro comando o esperar a que el Broker envie una direccion correcta.")
+					continue // Otra opción es pedir inmediatamente otra dirección al Broker
+				}
+			}
 
-		malkor.Sectors[sector] = SectorRecord{
-			Sector:        sector,
-			VectorClock:   fulcrumResp.VectorClock,
-			FulcrumServer: BrokerResponse.Address,
+			command.VectorClock = malkor.Sectors[sector].VectorClock
+
+			fulcrumResp, err := fulcrumClient.ProcessCommand(ctx, command)
+			if err != nil {
+				log.Fatalf("No se pudo procesar el comando %v", err)
+			}
+			fmt.Printf("Malkor recibio el reloj vectorial: %v\n", fulcrumResp.VectorClock)
+
+			malkor.Sectors[sector] = SectorRecord{
+				Sector:        sector,
+				VectorClock:   fulcrumResp.VectorClock,
+				FulcrumServer: BrokerResponse.Address,
+			}
+			break
 		}
 	}
 }
