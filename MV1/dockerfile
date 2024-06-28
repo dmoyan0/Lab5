@@ -17,8 +17,8 @@ ARG SERVER_TYPE
 WORKDIR /app
 
 # Copia los archivos go.mod y go.sum del directorio raíz al contenedor
-COPY go.mod .
-COPY go.sum .
+COPY /../go.mod .
+COPY /../go.sum .
 
 # Descarga e instala las dependencias de Go
 RUN go mod download

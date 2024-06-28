@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	pb "github.com/dmoyan0/Lab5/grpc"
+	pb "github.com/dmoyan0/Lab5/PROTO/grpc"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
