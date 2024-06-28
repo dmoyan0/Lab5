@@ -449,8 +449,8 @@ func sendMergedFileToFulcrum(serverAddress, filename string) error {
 
 // Función para combinar los logs de todos los Fulcrum y actualizar los archivos de sectores
 func merge(s *server) error {
-	servers := []string{":60052", ":60053"} // Direcciones de otros Fulcrum
-	filename := "Merge.txt"                 // Nombre del archivo del merge
+	servers := []string{"dist030:60052", "dist032:60053"} // Direcciones de otros Fulcrum
+	filename := "Merge.txt"                               // Nombre del archivo del merge
 
 	var allLines [][]string
 	var mergedVectorClock []int32
@@ -561,7 +561,7 @@ func merge(s *server) error {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":60051")
+	lis, err := net.Listen("tcp", "0.0.0.0:60051")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

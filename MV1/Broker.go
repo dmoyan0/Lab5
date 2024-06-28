@@ -20,7 +20,7 @@ type server struct {
 
 func (s *server) SendAddress(ctx context.Context, req *pb.CommandRequest) (*pb.CommandResponse, error) {
 	fmt.Printf("Broker received decision: %d\n", req.Command)
-	possibleAddresses := []string{":60051", ":60052", ":60053"} //Cambiar por strings
+	possibleAddresses := []string{"dist031:60051", "dist030:60052", "dist032:60053"} //Cambiar por strings
 
 	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddress := possibleAddresses[rng.Intn(len(possibleAddresses))]
@@ -33,7 +33,7 @@ func (s *server) NotifyInconsistency(ctx context.Context, req *pb.InconsistencyR
 		req.Sector, req.Base, req.ClientAddress, req.ErrorMessage)
 
 	// Crear un cliente Fulcrum para el servidor específico que maneja el merge
-	mergeFulcrumAddress := ":60051" // Dirección del Fulcrum que maneja el merge
+	mergeFulcrumAddress := "dist031:60051" // Dirección del Fulcrum que maneja el merge
 	conn, err := grpc.Dial(mergeFulcrumAddress, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to Fulcrum at %s: %v", mergeFulcrumAddress, err)
