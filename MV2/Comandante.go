@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	pb "github.com/dmoyan0/Lab5/grpc"
+	pb "github.com/dmoyan0/Lab5/PROTO/grpc"
 	"google.golang.org/grpc"
 )
 
@@ -29,7 +29,7 @@ func main() {
 	//Se inicia con un map vacio
 	commander := Commander{Sectors: make(map[string]InfoSector)}
 
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(":50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("No se pudo conectar: %v", err)
 	}

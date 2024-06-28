@@ -36,12 +36,7 @@ EXPOSE 60052
 EXPOSE 60053
 
 # Comando para compilar y ejecutar el servidor basado en SERVER_TYPE
-CMD if [ "$SERVER_TYPE" = "Broker" ]; then \
-        PORT=$BROKER_PORT; \
-        cd /app/MV1; \
-        go build -o broker-server Broker.go; \
-        ./broker-server; \
-    elif [ "$SERVER_TYPE" = "Comandante" ]; then \
+CMD if [ "$SERVER_TYPE" = "Comandante" ]; then \
         PORT=$COMANDANTE_PORT; \
         cd /app/MV2; \
         go build -o comandante-server Comandante.go; \
@@ -51,26 +46,4 @@ CMD if [ "$SERVER_TYPE" = "Broker" ]; then \
         cd /app/MV2; \
         go build -o fulcrum1-server Fulcrum1.go; \
         ./fulcrum1-server; \
-    elif [ "$SERVER_TYPE" = "Fulcrum2" ]; then \
-        PORT=$FULCRUM2_PORT; \
-        cd /app/MV3; \
-        go build -o fulcrum2-server Fulcrum2.go; \
-        ./fulcrum2-server; \
-    elif [ "$SERVER_TYPE" = "Fulcrum3" ]; then \
-        PORT=$FULCRUM3_PORT; \
-        cd /app/MV4; \
-        go build -o fulcrum3-server Fulcrum3.go; \
-        ./fulcrum3-server; \
-    elif [ "$SERVER_TYPE" = "Malkor" ]; then \
-        PORT=$MALKOR_PORT; \
-        cd /app/MV4; \
-        go build -o malkor-server Malkor.go; \
-        ./malkor-server; \
-    elif [ "$SERVER_TYPE" = "Jeth" ]; then \
-        PORT=$JETH_PORT; \
-        cd /app/MV3; \
-        go build -o jeth-server Jeth.go; \
-        ./jeth-server; \
-    else \
-        echo "Invalid SERVER_TYPE argument."; \
     fi

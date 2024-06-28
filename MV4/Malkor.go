@@ -25,7 +25,7 @@ type Malkor struct {
 
 func main() {
 	malkor := Malkor{Sectors: make(map[string]SectorRecord)}
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(":50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}

@@ -26,7 +26,7 @@ type Jeth struct {
 func main() {
 	jeth := Jeth{Sectors: make(map[string]SectorRecord)}
 	// Conexión al Broker
-	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(":50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
