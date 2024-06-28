@@ -1,0 +1,7 @@
+services:
+  server:
+    build:
+      	context: ../
+      	dockerfile: ./MV3/dockerfile
+    ports:
+    	- 60055:50051 
