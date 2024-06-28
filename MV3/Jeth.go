@@ -27,7 +27,7 @@ func main() {
 	jeth := Jeth{Sectors: make(map[string]SectorRecord)}
 	fmt.Println("Iniciado")
 	// Conexión al Broker
-	conn, err := grpc.Dial("broker-server:50051", grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial("dist029:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
