@@ -449,7 +449,7 @@ func sendMergedFileToFulcrum(serverAddress, filename string) error {
 
 // Función para combinar los logs de todos los Fulcrum y actualizar los archivos de sectores
 func merge(s *server) error {
-	servers := []string{"dist030:60052", "dist032:60053"} // Direcciones de otros Fulcrum
+	servers := []string{"dist099:60052", "dist032:60053"} // Direcciones de otros Fulcrum
 	filename := "Merge.txt"                               // Nombre del archivo del merge
 
 	var allLines [][]string
